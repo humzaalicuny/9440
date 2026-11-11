@@ -1,6 +1,6 @@
 -- Staging model: NYC Motor Vehicle Collisions
 -- Grain: one row = one collision (collision_id)
--- Cleans types, standardizes text, fills missing borough from zip, dedupes, filters to 2020 to 2025.
+-- Cleans types, standardizes text, fills missing borough from zip or coordinates, dedupes, filters to 2020 to 2025.
 
 with source as (
 
@@ -21,6 +21,8 @@ cleaned as (
         -- location
         nullif(upper(trim(cast(borough as string))), '') as borough,
         regexp_extract(cast(zip_code as string), r'^\d{5}') as zip_code,
+        safe_cast(latitude as float64) as latitude,
+        safe_cast(longitude as float64) as longitude,
 
         -- measures (null means 0)
         coalesce(safe_cast(number_of_persons_injured     as int64), 0) as number_of_persons_injured,
@@ -61,12 +63,42 @@ zip_borough_counts as (
 
 ),
 
--- most common borough for each zip, used to fill rows missing a borough
+-- most common borough for each NYC zip
 zip_borough_lookup as (
 
     select zip_code, borough
     from zip_borough_counts
     qualify row_number() over (partition by zip_code order by n desc) = 1
+
+),
+
+-- NYC zip code shapes, tagged with their borough
+nyc_zip_shapes as (
+
+    select
+        z.zip_code,
+        z.zip_code_geom,
+        l.borough
+    from {{ source('geo_us_boundaries', 'zip_codes') }} z
+    inner join zip_borough_lookup l
+        on z.zip_code = l.zip_code
+
+),
+
+-- for collisions missing a borough, find the NYC zip their coordinates fall inside
+coord_matches as (
+
+    select
+        c.collision_id,
+        s.zip_code as geo_zip_code,
+        s.borough as geo_borough
+    from cleaned c
+    inner join nyc_zip_shapes s
+        on st_contains(s.zip_code_geom, st_geogpoint(c.longitude, c.latitude))
+    where c.borough is null
+      and c.latitude between 40.4 and 41.0
+      and c.longitude between -74.3 and -73.6
+    qualify row_number() over (partition by c.collision_id order by s.zip_code) = 1
 
 ),
 
@@ -77,9 +109,16 @@ final as (
         c.crash_date,
         c.crash_hour,
         c.crash_minute,
-        coalesce(c.borough, z.borough, 'UNKNOWN') as borough,
-        case when c.borough is null and z.borough is not null then true else false end as is_borough_filled_from_zip,
-        c.zip_code,
+        coalesce(c.borough, z.borough, g.geo_borough, 'UNKNOWN') as borough,
+        case
+            when c.borough is not null then 'ORIGINAL'
+            when z.borough is not null then 'ZIP'
+            when g.geo_borough is not null then 'COORDINATES'
+            else 'UNKNOWN'
+        end as borough_source,
+        coalesce(c.zip_code, g.geo_zip_code) as zip_code,
+        c.latitude,
+        c.longitude,
         c.number_of_persons_injured,
         c.number_of_persons_killed,
         c.number_of_pedestrians_injured,
@@ -101,6 +140,8 @@ final as (
     from cleaned c
     left join zip_borough_lookup z
         on c.zip_code = z.zip_code
+    left join coord_matches g
+        on c.collision_id = g.collision_id
     where c.crash_date between '2020-01-01' and '2025-12-31'
     qualify row_number() over (partition by c.collision_id order by c.crash_date) = 1
 

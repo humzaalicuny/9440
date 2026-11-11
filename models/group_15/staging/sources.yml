@@ -10,5 +10,12 @@ sources:
         columns:
           - name: collision_id
             description: NYPD unique collision identifier.
-            tests:
+            data_tests:
               - not_null
+
+  - name: geo_us_boundaries
+    description: Google public dataset of US zip code boundaries, used to fill missing boroughs from collision coordinates.
+    database: bigquery-public-data
+    schema: geo_us_boundaries
+    tables:
+      - name: zip_codes
