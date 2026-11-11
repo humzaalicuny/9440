@@ -1,0 +1,18 @@
+version: 2
+
+models:
+  - name: stg_motor_vehicle_collisions
+    description: Cleaned NYC collisions, 2020 to 2025. One row per collision_id. Missing boroughs filled from zip where possible, otherwise UNKNOWN.
+    columns:
+      - name: collision_id
+        tests:
+          - unique
+          - not_null
+      - name: crash_date
+        tests:
+          - not_null
+      - name: borough
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['MANHATTAN', 'BROOKLYN', 'QUEENS', 'BRONX', 'STATEN ISLAND', 'UNKNOWN']
