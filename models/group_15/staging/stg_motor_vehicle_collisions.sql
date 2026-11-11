@@ -52,6 +52,21 @@ cleaned as (
 ),
 
 -- most common borough for each zip, used to fill rows missing a borough
+-- count collisions per zip and borough
+zip_borough_counts as (
+
+    select zip_code, borough, count(*) as n
+    from cleaned
+    where zip_code is not null and borough is not null
+    group by zip_code, borough
+
+),
+
+-- most common borough for each zip, used to fill rows missing a borough
 zip_borough_lookup as (
 
     select zip_code, borough
+    from zip_borough_counts
+    qualify row_number() over (partition by zip_code order by n desc) = 1
+
+),
