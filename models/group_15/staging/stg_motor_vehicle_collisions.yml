@@ -5,14 +5,15 @@ models:
     description: Cleaned NYC collisions, 2020 to 2025. One row per collision_id. Missing boroughs filled from zip where possible, otherwise UNKNOWN.
     columns:
       - name: collision_id
-        tests:
+        data_tests:
           - unique
           - not_null
       - name: crash_date
-        tests:
+        data_tests:
           - not_null
       - name: borough
-        tests:
+        data_tests:
           - not_null
           - accepted_values:
-              values: ['MANHATTAN', 'BROOKLYN', 'QUEENS', 'BRONX', 'STATEN ISLAND', 'UNKNOWN']
+              arguments:
+                values: ['MANHATTAN', 'BROOKLYN', 'QUEENS', 'BRONX', 'STATEN ISLAND', 'UNKNOWN']
