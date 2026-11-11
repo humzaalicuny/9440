@@ -34,3 +34,8 @@ models:
           +materialized: table
         dot_311:
           +materialized: table
+    group_15:
+      staging:
+        +schema: group_15_staging
+      marts:
+        +schema: group_15_marts
