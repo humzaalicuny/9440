@@ -1,0 +1,21 @@
+version: 2
+
+sources:
+  - name: group_15_raw_data
+    description: Raw NYC Open Data loaded by Cloud Functions + Cloud Scheduler (2020 to 2025).
+    schema: group_15_raw_data
+    tables:
+      - name: source_motor_vehicle_collisions
+        description: Motor Vehicle Collisions Crashes (NYPD). One row per collision reported on form MV-104AN. 600,852 rows.
+        columns:
+          - name: collision_id
+            description: NYPD unique collision identifier.
+            data_tests:
+              - not_null
+
+  - name: geo_us_boundaries
+    description: Google public dataset of US zip code boundaries, used to fill missing boroughs from collision coordinates.
+    database: bigquery-public-data
+    schema: geo_us_boundaries
+    tables:
+      - name: zip_codes

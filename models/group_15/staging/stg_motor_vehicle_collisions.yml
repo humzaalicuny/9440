@@ -1,0 +1,25 @@
+version: 2
+
+models:
+  - name: stg_motor_vehicle_collisions
+    description: Cleaned NYC collisions, 2020 to 2025. One row per collision_id. Missing boroughs filled from zip, then from coordinates (zip boundary lookup), otherwise UNKNOWN.
+    columns:
+      - name: collision_id
+        data_tests:
+          - unique
+          - not_null
+      - name: crash_date
+        data_tests:
+          - not_null
+      - name: borough
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['MANHATTAN', 'BROOKLYN', 'QUEENS', 'BRONX', 'STATEN ISLAND', 'UNKNOWN']
+      - name: borough_source
+        description: Where the borough came from. ORIGINAL = raw data, ZIP = filled from zip code, COORDINATES = filled from lat/long, UNKNOWN = could not be filled.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['ORIGINAL', 'ZIP', 'COORDINATES', 'UNKNOWN']
